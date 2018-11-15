@@ -32,9 +32,9 @@ class GenAttack:
         # population of random individuals
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
 
-    def attack(self, orig_img, target, num_gen):
+    def attack(self, orig_img, target, model, num_gen):
         # initialize population
-        pop = self.toolbox.population(n = 25)
+        pop = self.toolbox.population(n=25)
 
         for ind in pop:
             print(ind)
