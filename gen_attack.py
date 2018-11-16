@@ -43,7 +43,7 @@ class GenAttack:
             continue
             # compute fitnesss
 
-            # check if best individual == target
+            # check if best individual == target (keep best individual)
 
             # roulette selection
 
