@@ -4,7 +4,7 @@ from deap import creator
 from deap import tools
 
 
-class GenAttack:
+class NoveltyAttack:
     def __init__(self, model, dist_delta=0.3, step_size=1, pop_size=6, mut_prob=0.05):
         self.dist_delta = dist_delta
         self.step_size = step_size
