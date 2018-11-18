@@ -16,14 +16,14 @@ class NoveltyEvaluator:
         self.to_archive.clear()
         self.archive_under = 0
 
-    def evaluate_novelty(self, current_pop, individual):
+    def evaluate_novelty(self, current_pop, behavior):
         total_size = len(self.archive) + len(current_pop)
         dist = []
         index = 0
         in_archive_count = 0
 
         for archived in self.archive:
-            dist[index] = self._distance_between(individual, archived)
+            dist[index] = self._distance_between(behavior, archived)
 
             if dist[index] < 0.0000001:
                 in_archive_count += 1
@@ -31,7 +31,7 @@ class NoveltyEvaluator:
             index += 1
 
         for other in current_pop:
-            dist[index] = self._distance_between(individual, other)
+            dist[index] = self._distance_between(behavior, other)
 
             index += 1
 
@@ -44,9 +44,9 @@ class NoveltyEvaluator:
         avg_dist /= k_temp
 
         if in_archive_count < self.k:
-            if not self._contains_similar(current_pop, individual) \
-                    and not self._contains_similar(self.to_archive, individual):
-                self.to_archive.append(individual)
+            if not self._contains_similar(current_pop, behavior) \
+                    and not self._contains_similar(self.to_archive, behavior):
+                self.to_archive.append(behavior)
 
         return avg_dist
 
@@ -70,12 +70,12 @@ class NoveltyEvaluator:
         self.archive.extend(self.to_archive)
         self.to_archive.clear()
 
-    def _distance_between(self, ind1, ind2):
+    def _distance_between(self, b1, b2):
         return 0
 
-    def _contains_similar(self, population, individual):
-        for ind in population:
-            if self._distance_between(individual, ind) < self.archive_threshold:
+    def _contains_similar(self, population, behavior):
+        for b in population:
+            if self._distance_between(behavior, b) < self.archive_threshold:
                 return True
 
         return False
