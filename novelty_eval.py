@@ -1,12 +1,13 @@
 class NoveltyEvaluator:
-    def __init__(self, dimension, k=30, pop_size=6):
+    def __init__(self, k=30, pop_size=6):
+        self.pop_size = pop_size
         self.k = k  # sparseness value
-        self.archive_threshold = 1.0 / dimension
+        self.archive_threshold = 1.0 / self.pop_size
         self.archive_threshold_min = 0.05 * self.archive_threshold
         self.archive_threshold_factor = 1.0
         self.archive_under = 0
         self.archive_under_threshold = 10
-        self.archive_over_threshold = max(1, round(pop_size * 0.01))
+        self.archive_over_threshold = max(1, round(self.pop_size * 0.01))
 
         self.archive = []
         self.to_archive = []
@@ -14,6 +15,7 @@ class NoveltyEvaluator:
     def reset(self):
         self.archive.clear()
         self.to_archive.clear()
+        self.archive_threshold = 1.0 / self.pop_size
         self.archive_under = 0
 
     def evaluate_novelty(self, current_pop, behavior):

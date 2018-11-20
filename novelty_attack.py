@@ -3,6 +3,8 @@ from deap import base
 from deap import creator
 from deap import tools
 
+from novelty_eval import NoveltyEvaluator
+
 
 class NoveltyAttack:
     def __init__(self, model, dist_delta=0.3, step_size=1, pop_size=6, mut_prob=0.05):
@@ -13,6 +15,9 @@ class NoveltyAttack:
         self.model = model
 
         self.toolbox = base.Toolbox()
+
+        self.pop = []
+        self.novelty_eval = NoveltyEvaluator(pop_size=self.pop_size)
 
         np.random.seed(64)
 
@@ -28,10 +33,13 @@ class NoveltyAttack:
 
         def evaluate(individual):
             # TODO: do stuff to get model prediction
-            target_prediction = sum(individual)  # just for demonstration
-            other_prediction = 1  # max prediction of other label != target
 
-            return (np.log10(target_prediction) - np.log10(other_prediction),)
+            behavior = []  # get predictions from model
+
+            # evaluate novelty of behavior
+            novelty = self.novelty_eval.evaluate_novelty(self.pop, behavior)
+
+            return novelty
 
         # individual of random values
         self.toolbox.register("individual", tools.initRepeat, creator.Individual,
@@ -41,24 +49,24 @@ class NoveltyAttack:
         # evaluation function
         self.toolbox.register("evaluate", evaluate)
 
-    def attack(self, orig_img, target, pop_size, num_gen):
+    def attack(self, orig_img, target, num_gen):
         # initialize population
-        pop = self.toolbox.population(n=pop_size)
+        self.pop = self.toolbox.population(n=self.pop_size)
 
-        for ind in pop:
+        for ind in self.pop:
             print(ind)
 
         for g in range(num_gen):
             # evaluate the entire population
-            fitnesses = map(self.toolbox.evaluate, pop)
-            for ind, fit in zip(pop, fitnesses):
+            fitnesses = map(self.toolbox.evaluate, self.pop)
+            for ind, fit in zip(self.pop, fitnesses):
                 print("fit=", fit)
                 ind.fitness.values = fit
 
             # check if best individual == target (keep best individual)
 
             # select the next generation individuals
-            offspring = list(map(self.toolbox.clone, tools.selRoulette(pop, len(pop) - 1)))
+            offspring = list(map(self.toolbox.clone, tools.selRoulette(self.pop, len(self.pop) - 1)))
 
             # mate the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -73,5 +81,5 @@ class NoveltyAttack:
                     del mutant.fitness.values
 
             # replace population with new offspring
-            pop[:] = offspring
+            self.pop[:] = offspring
             # add elite member
