@@ -1,3 +1,5 @@
+import random
+
 from gen_attack import GenAttack
 import numpy as np
 import tensorflow as tf
@@ -24,4 +26,17 @@ model.evaluate(x_test, y_test)
 
 gen = GenAttack(model)
 
-gen.attack(orig_img=x_train[0], orig_index=y_train[0], target_index=3, pop_size=6, num_gen=1000)
+results = []
+
+for i in range(10):
+    target = random.randint(0, 9)
+    while target == y_test[i]:
+        target = random.randint(0, 9)
+
+    print("changing", y_test[i], "to", target)
+    result = gen.attack(image=x_test[i], index=y_test[i], target_index=3, pop_size=6, num_eval=100000, draw=False)
+    results.append(result)
+    print("finished after", result, "evaluations")
+
+print(results)
+print("mean=", sum(results) / len(results))
