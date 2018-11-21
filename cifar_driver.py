@@ -7,7 +7,7 @@ import tensorflow as tf
 from PIL import Image
 
 from gen_attack import GenAttack
-from zoo.setup_mnist import MNIST, MNISTModel
+from zoo.setup_cifar import CIFAR, CIFARModel
 
 
 def show(img, name="output.png"):
@@ -68,9 +68,9 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = True
 
-        data, model = MNIST(), MNISTModel("zoo/models/mnist", sess, use_log)
+        data, model = CIFAR(), CIFARModel("zoo/models/cifar", sess, use_log)
 
-        attack = GenAttack(model, 28, 1)
+        attack = GenAttack(model, 32, 3, dist_delta=0.05)
 
         num_samples = 10
 

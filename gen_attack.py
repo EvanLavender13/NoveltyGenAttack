@@ -6,11 +6,13 @@ from deap import tools
 import multiprocessing
 
 class GenAttack:
-    def __init__(self, model, dist_delta=0.3, step_size=1, mut_prob=0.05):
+    def __init__(self, model, image_shape, image_dim, dist_delta=0.3, step_size=1, mut_prob=0.05):
         self.dist_delta = dist_delta
         self.step_size = step_size
         self.mut_prob = mut_prob
         self.model = model
+        self.image_shape = image_shape
+        self.image_dim = image_dim
         self.image = None
         self.target_index = 0
         self.stop = False
@@ -35,7 +37,7 @@ class GenAttack:
         self.toolbox.register("random_distribution", self.distribution)
         # individual of random values
         self.toolbox.register("individual", tools.initRepeat, creator.Individual,
-                              self.toolbox.random_distribution, n=28 ** 2)
+                              self.toolbox.random_distribution, n=(self.image_shape ** 2) * self.image_dim)
         # population of random individuals
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
         # evaluation function
@@ -52,7 +54,7 @@ class GenAttack:
             log(target prediction) - log(max prediction != target)
         """
         ind = np.array(individual)
-        ind = ind.reshape((28, 28, 1))
+        ind = ind.reshape((self.image_shape, self.image_shape, self.image_dim))
 
         image = (np.expand_dims(ind, 0))
         predictions = self.model.predict(image)[0]
@@ -106,7 +108,7 @@ class GenAttack:
             plt.ion()
             plt.show()
             img = np.array(pop[0])
-            img = img.reshape((28, 28))
+            img = img.reshape((self.image_shape, self.image_shape, self.image_dim))
             self.plot_img = plt.imshow(img)
             plt.draw()
             plt.pause(0.001)
@@ -163,7 +165,7 @@ class GenAttack:
 
             if draw:
                 ind = np.array(elite)
-                ind = ind.reshape((28, 28))
+                ind = ind.reshape((self.image_shape, self.image_shape, self.image_dim))
                 self.plot_img.set_data(ind)
                 plt.draw()
                 plt.pause(0.00001)
