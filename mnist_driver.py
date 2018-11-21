@@ -64,48 +64,49 @@ def generate_data(data, samples, targeted=True, start=0, inception=False):
     return inputs, targets
 
 
-with tf.Session() as sess:
-    use_log = True
+if __name__ == "__main__":
+    with tf.Session() as sess:
+        use_log = True
 
-    data, model = MNIST(), MNISTModel("zoo/models/mnist", sess, use_log)
+        data, model = MNIST(), MNISTModel("zoo/models/mnist", sess, use_log)
 
-    attack = GenAttack(model)
+        attack = GenAttack(model)
 
-    num_samples = 10
+        num_samples = 10
 
-    inputs, targets = generate_data(data, samples=num_samples, targeted=True,
-                                    start=0, inception=False)
+        inputs, targets = generate_data(data, samples=num_samples, targeted=True,
+                                        start=0, inception=False)
 
-    inputs = inputs[1:num_samples + 1]
-    targets = targets[1:num_samples + 1]
+        inputs = inputs[1:num_samples + 1]
+        targets = targets[1:num_samples + 1]
 
-    query_results = []
-    time_results = []
+        query_results = []
+        time_results = []
 
-    max_queries = 100000
-    fails = 0
+        max_queries = 100000
+        fails = 0
 
-    for i in range(len(inputs)):
-        image = (np.expand_dims(inputs[i], 0))
-        prediction = model.predict(image)
+        for i in range(len(inputs)):
+            image = (np.expand_dims(inputs[i], 0))
+            prediction = model.predict(image)
 
-        print("changing", np.argmax(prediction), "to", np.argmax(targets[i]))
+            print("changing", np.argmax(prediction), "to", np.argmax(targets[i]))
 
-        time_start = time.time()
-        result = attack.attack(image=image, target_index=np.argmax(targets[i]), pop_size=6, num_eval=max_queries,
-                               draw=False)
-        time_end = time.time()
+            time_start = time.time()
+            result = attack.attack(image=image, target_index=np.argmax(targets[i]), pop_size=6, num_eval=max_queries,
+                                   draw=False)
+            time_end = time.time()
 
-        print("Took", time_end - time_start, "seconds to run", len(inputs), "samples.")
+            print("Took", time_end - time_start, "seconds to run", len(inputs), "samples.")
 
-        if result != max_queries:
-            query_results.append(result)
-            time_results.append(time_end - time_start)
-        else:
-            fails += 1
+            if result != max_queries:
+                query_results.append(result)
+                time_results.append(time_end - time_start)
+            else:
+                fails += 1
 
-        print("num_attacks=", len(inputs))
-        print("failed_attacks=", fails)
-        print("asr=", (len(inputs) - fails) / len(inputs) * 100)
-        print("median query count=", statistics.median(query_results))
-        print("mean runtime=", statistics.mean(time_results) / 3600)
+            print("num_attacks=", len(inputs))
+            print("failed_attacks=", fails)
+            print("asr=", (len(inputs) - fails) / len(inputs) * 100)
+            print("median query count=", statistics.median(query_results))
+            print("mean runtime=", statistics.mean(time_results) / 3600)

@@ -3,7 +3,7 @@ import numpy as np
 from deap import base
 from deap import creator
 from deap import tools
-
+import multiprocessing
 
 class GenAttack:
     def __init__(self, model, dist_delta=0.3, step_size=1, mut_prob=0.05):
@@ -23,6 +23,9 @@ class GenAttack:
         self.toolbox = base.Toolbox()
 
         np.random.seed(64)
+
+        pool = multiprocessing.Pool()
+        self.toolbox.register("map", pool.map)
 
         # create a maximizing fitness value
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
