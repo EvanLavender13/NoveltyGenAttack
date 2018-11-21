@@ -121,7 +121,10 @@ class GenAttack:
                 plt.ion()
                 plt.show()
                 img = np.array(pop[0])
-                img = img.reshape((self.image_shape, self.image_shape))
+                if self.image_dim > 1:
+                    img = img.reshape((self.image_shape, self.image_shape, self.image_dim))
+                else:
+                    img = img.reshape((self.image_shape, self.image_shape))
                 self.plot_img = plt.imshow(img)
                 plt.draw()
                 plt.pause(0.001)
@@ -177,7 +180,10 @@ class GenAttack:
 
             if draw:
                 ind = np.array(elite)
-                ind = ind.reshape((self.image_shape, self.image_shape))
+                if self.image_dim > 1:
+                    ind = ind.reshape((self.image_shape, self.image_shape, self.image_dim))
+                else:
+                    ind = ind.reshape((self.image_shape, self.image_shape))
                 self.plot_img.set_data(ind)
                 plt.draw()
                 plt.pause(0.00001)

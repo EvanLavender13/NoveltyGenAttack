@@ -73,8 +73,9 @@ if __name__ == "__main__":
         attack = GenAttack(model, 32, 3, dist_delta=0.05)
 
         num_samples = 10
+        targeted = False
 
-        inputs, targets = generate_data(data, samples=num_samples, targeted=True,
+        inputs, targets = generate_data(data, samples=num_samples, targeted=targeted,
                                         start=0, inception=False)
 
         inputs = inputs[1:num_samples + 1]
@@ -96,9 +97,11 @@ if __name__ == "__main__":
 
             print("sample", i + 1, "- changing", original_index, "to", target_index)
 
+            index = target_index if targeted else original_index
+
             time_start = time.time()
-            result = attack.attack(image=image, pop_size=6, targeted=False, index=original_index, num_eval=max_queries,
-                                   draw=False)
+            result = attack.attack(image=image, pop_size=6, targeted=targeted, index=index, num_eval=max_queries,
+                                   draw=True)
             time_end = time.time()
 
             print("took", time_end - time_start, "seconds")
