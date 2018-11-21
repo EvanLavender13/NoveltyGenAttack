@@ -70,8 +70,8 @@ class GenAttack:
         #print("target_prediction=", target_prediction)
         #print("other_prediction=", other_prediction)
 
-        if self.evaluations % 500 == 0:
-            print("eval:", self.evaluations)
+        #if self.evaluations % 500 == 0:
+        #    print("eval:", self.evaluations)
 
         return (np.log10(target_prediction) - np.log10(other_prediction),)
 
@@ -124,15 +124,16 @@ class GenAttack:
 
             # normalize for negative fitness values
             fits = [ind.fitness.values[0] for ind in pop]
-            min_fit = abs(min(fits)) + 1
+            min_fit = abs(min(fits))
             for ind in pop:
-                ind.fitness.values += min_fit
+                ind.fitness.values = (ind.fitness.values[0] + min_fit,)
+
+            elite = max(pop, key=lambda ind: ind.fitness.values)
 
             # select the next generation individuals
-            # offspring = list(map(self.toolbox.clone, tools.selRoulette(pop, len(pop))))
-            offspring = []
-            max = sum(ind.fitness.values[0] for ind in pop)
-            selection_probs = [ind.fitness.values[0] / max for ind in pop]
+            offspring = [elite]
+            maximum = sum(ind.fitness.values[0] for ind in pop)
+            selection_probs = [ind.fitness.values[0] / maximum for ind in pop]
             while len(offspring) < pop_size:
                 parent1 = pop[np.random.choice(pop_size, p=selection_probs)]
                 parent2 = pop[np.random.choice(pop_size, p=selection_probs)]
@@ -161,7 +162,7 @@ class GenAttack:
                         ind[i] = flattened_image[i] - self.dist_delta
 
             if draw:
-                ind = np.array(pop[0])
+                ind = np.array(elite)
                 ind = ind.reshape((28, 28))
                 self.plot_img.set_data(ind)
                 plt.draw()

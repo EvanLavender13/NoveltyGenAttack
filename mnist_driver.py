@@ -97,7 +97,7 @@ if __name__ == "__main__":
                                    draw=False)
             time_end = time.time()
 
-            print("Took", time_end - time_start, "seconds to run", len(inputs), "samples.")
+            print("took", time_end - time_start, "seconds")
 
             if result != max_queries:
                 query_results.append(result)
@@ -105,8 +105,8 @@ if __name__ == "__main__":
             else:
                 fails += 1
 
-            print("num_attacks=", len(inputs))
-            print("failed_attacks=", fails)
-            print("asr=", (len(inputs) - fails) / len(inputs) * 100)
-            print("median query count=", statistics.median(query_results))
-            print("mean runtime=", statistics.mean(time_results) / 3600)
+        print("num_attacks=", len(inputs))
+        print("failed_attacks=", fails)
+        print("asr=", (len(inputs) - fails) / len(inputs) * 100)
+        print("median query count=", statistics.median(query_results))
+        print("mean runtime=", statistics.mean(time_results) / 3600)
