@@ -40,6 +40,15 @@ class GenAttack:
         self.toolbox.register("evaluate", self.evaluate)
 
     def evaluate(self, individual):
+        """
+        Evaluates an individual by classifying it with the given model.
+
+        Args:
+            individual: individual to be evaluated, an image in this case
+
+        Returns:
+            log(target prediction) - log(max prediction != target)
+        """
         ind = np.array(individual)
         ind = ind.reshape((28, 28))
 
@@ -58,8 +67,13 @@ class GenAttack:
 
         return (np.log10(target_prediction) - np.log10(other_prediction) + 1,)
 
-    # random distribution - bernoulli(p) * U(-delta, delta)
     def distribution(self):
+        """
+        A bernoulli distribution in the given range of distortion
+
+        Returns:
+            Bernoulli(p) * U(-dist, dist)
+        """
         return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-self.dist_delta,
                                                                             high=self.dist_delta)
 
