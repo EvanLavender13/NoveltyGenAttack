@@ -65,7 +65,7 @@ class GenAttack:
         other_prediction_index = np.argmax(predictions)
         other_prediction = predictions[other_prediction_index]
 
-        return (np.log10(target_prediction) - np.log10(other_prediction) + 1,)
+        return (np.log10(target_prediction) - np.log10(other_prediction),)
 
     def distribution(self):
         """
@@ -122,21 +122,26 @@ class GenAttack:
                 ind.fitness.values += min_fit
 
             # select the next generation individuals
-            offspring = list(map(self.toolbox.clone, tools.selRoulette(pop, len(pop))))
+            # offspring = list(map(self.toolbox.clone, tools.selRoulette(pop, len(pop))))
+            offspring = []
+            max = sum(ind.fitness.values[0] for ind in pop)
+            selection_probs = [ind.fitness.values[0] / max for ind in pop]
+            while len(offspring) < pop_size:
+                parent1 = pop[np.random.choice(pop_size, p=selection_probs)]
+                parent2 = pop[np.random.choice(pop_size, p=selection_probs)]
+                child = self.toolbox.individual()
 
-            # mate the offspring
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                prob = child1.fitness.values[0] / (child1.fitness.values[0] + child2.fitness.values[0])
-                tools.cxUniform(child1, child2, prob)
-                del child1.fitness.values
-                del child2.fitness.values
+                prob = parent1.fitness.values[0] / (parent1.fitness.values[0] + parent2.fitness.values[0])
+                for i in range(len(child)):
+                    parent = parent1 if np.random.random() < prob else parent2
+                    child[i] = parent[i]
 
-            # mutate the offspring
-            for mutant in offspring:
-                for x in range(len(mutant)):
-                    mutant[x] += self.toolbox.random_distribution()
+                for i in range(len(child)):
+                    child[i] += self.toolbox.random_distribution()
 
-                del mutant.fitness.values
+                del child.fitness.values
+
+                offspring.append(child)
 
             # replace population with new offspring
             pop[:] = offspring
