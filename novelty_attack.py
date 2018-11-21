@@ -1,85 +1,178 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from deap import base
 from deap import creator
 from deap import tools
+import multiprocessing
 
 from novelty_eval import NoveltyEvaluator
 
 
 class NoveltyAttack:
-    def __init__(self, model, dist_delta=0.3, step_size=1, pop_size=6, mut_prob=0.05):
+    def __init__(self, model, image_shape, image_dim, dist_delta=0.3, step_size=1, mut_prob=0.05):
         self.dist_delta = dist_delta
         self.step_size = step_size
-        self.pop_size = pop_size
         self.mut_prob = mut_prob
         self.model = model
+        self.image_shape = image_shape
+        self.image_dim = image_dim
+        self.image = None
+        self.target_index = 0
+        self.stop = False
+        self.evaluations = 0
+        self.evaluation_found = 0
+        self.adversarial_image = None
+        self.pop = None
+        self.predictions = None
 
+        self.plot_img = None
+
+        self.novelty_eval = NoveltyEvaluator()
         self.toolbox = base.Toolbox()
 
-        self.pop = []
-        self.novelty_eval = NoveltyEvaluator(pop_size=self.pop_size)
-
         np.random.seed(64)
+
+        pool = multiprocessing.Pool()
+        self.toolbox.register("map", pool.map)
 
         # create a maximizing fitness value
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         # create an individual that is a list of values to be added to image
-        creator.create("Individual", list, fitness=creator.FitnessMax)
+        creator.create("Individual", np.ndarray, fitness=creator.FitnessMax)
 
-        # random distribution - bernoulli(p) * U(-delta, delta)
-        def distribution():
-            return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-self.dist_delta,
-                                                                                high=self.dist_delta)
-
-        def evaluate(individual):
-            # TODO: do stuff to get model prediction
-
-            behavior = []  # get predictions from model
-
-            # evaluate novelty of behavior
-            novelty = self.novelty_eval.evaluate_novelty(self.pop, behavior)
-
-            return novelty
-
+        self.toolbox.register("random_distribution", self.distribution)
         # individual of random values
         self.toolbox.register("individual", tools.initRepeat, creator.Individual,
-                              distribution, n=2 ** 2)
+                              self.toolbox.random_distribution, n=(self.image_shape ** 2) * self.image_dim)
         # population of random individuals
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
         # evaluation function
-        self.toolbox.register("evaluate", evaluate)
+        self.toolbox.register("evaluate", self.evaluate)
 
-    def attack(self, orig_img, target, num_gen):
+    def evaluate(self, individual):
+        """
+        Evaluates an individual by classifying it with the given model.
+
+        Args:
+            individual: individual to be evaluated, an image in this case
+
+        Returns:
+            log(target prediction) - log(max prediction != target)
+        """
+
+        behavior = self.predictions.get(str(individual))
+
+        novelty = self.novelty_eval.evaluate_novelty(self.pop, self.predictions, behavior)
+
+        return (novelty,)
+
+
+
+    def distribution(self):
+        """
+        A bernoulli distribution in the given range of distortion
+
+        Returns:
+            Bernoulli(p) * U(-dist, dist)
+        """
+        return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-self.dist_delta,
+                                                                            high=self.dist_delta)
+
+    def attack(self, image, target_index, pop_size, num_eval=100000, draw=False):
+        self.image = image
+        self.target_index = target_index
+        self.stop = False
+        self.evaluations = 0
+        self.evaluation_found = 0
+
         # initialize population
-        self.pop = self.toolbox.population(n=self.pop_size)
+        pop = self.toolbox.population(n=pop_size)
+        flattened_image = image.flatten()
+        images = [flattened_image] * pop_size
 
-        for ind in self.pop:
-            print(ind)
+        for individual, image in zip(pop, images):
+            for i in range(len(individual)):
+                individual[i] += image[i]
 
-        for g in range(num_gen):
+        if draw:
+            plt.figure()
+            plt.ion()
+            plt.show()
+            img = np.array(pop[0])
+            img = img.reshape((self.image_shape, self.image_shape))
+            self.plot_img = plt.imshow(img)
+            plt.draw()
+            plt.pause(0.001)
+
+        while self.evaluations < num_eval:
+            self.pop = pop
+            self.predictions = {}
+            for individual in pop:
+                ind = np.array(individual)
+                ind = ind.reshape((self.image_shape, self.image_shape, self.image_dim))
+
+                img = (np.expand_dims(ind, 0))
+                prediction = self.model.predict(img)
+                self.predictions[str(individual)] = prediction[0]
+                self.evaluations += 1
+
+                print("pred=", prediction[0])
+                print("max=", np.max(prediction[0]))
+                print("target=", prediction[0][self.target_index])
+
+                if np.argmax(prediction) == self.target_index:
+                    self.stop = True
+                    self.evaluation_found = self.evaluations
+
             # evaluate the entire population
-            fitnesses = map(self.toolbox.evaluate, self.pop)
-            for ind, fit in zip(self.pop, fitnesses):
-                print("fit=", fit)
+            fitnesses = map(self.toolbox.evaluate, pop)
+            for ind, fit in zip(pop, fitnesses):
                 ind.fitness.values = fit
 
-            # check if best individual == target (keep best individual)
+            self.novelty_eval.post_evaluation()
+
+            if self.stop:
+                return self.evaluation_found
+
+            # get elite member
+            elite = max(pop, key=lambda ind: ind.fitness.values[0])
 
             # select the next generation individuals
-            offspring = list(map(self.toolbox.clone, tools.selRoulette(self.pop, len(self.pop) - 1)))
+            offspring = [elite]
+            maximum = sum(ind.fitness.values[0] for ind in pop)
+            selection_probs = [ind.fitness.values[0] / maximum for ind in pop]
+            while len(offspring) < pop_size:
+                parent1 = pop[np.random.choice(pop_size, p=selection_probs)]
+                parent2 = pop[np.random.choice(pop_size, p=selection_probs)]
+                child = self.toolbox.individual()
 
-            # mate the offspring
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                # TODO: uniform crossover (f(child1) / (f(child1) + f(child2))
-                del child1.fitness.values
-                del child2.fitness.values
+                prob = parent1.fitness.values[0] / (parent1.fitness.values[0] + parent2.fitness.values[0])
+                for i in range(len(child)):
+                    parent = parent1 if np.random.random() < prob else parent2
+                    child[i] = parent[i]
 
-            # mutate the offspring
-            for mutant in offspring:
-                if np.random.random() < self.mut_prob:
-                    # TODO: mutate (bernoulli(p) * uniform(-delta, delta)
-                    del mutant.fitness.values
+                    child[i] += self.toolbox.random_distribution()
+                    del child.fitness.values
+
+                offspring.append(child)
 
             # replace population with new offspring
-            self.pop[:] = offspring
+            pop[:] = offspring
             # add elite member
+
+            # perform image clipping
+            for ind in pop:
+                for i in range(len(ind)):
+                    if ind[i] - flattened_image[i] > self.dist_delta:
+                        ind[i] = flattened_image[i] + self.dist_delta
+                    elif abs(ind[i] - flattened_image[i]) > self.dist_delta:
+                        ind[i] = flattened_image[i] - self.dist_delta
+
+            if draw:
+                ind = np.array(elite)
+                ind = ind.reshape((self.image_shape, self.image_shape))
+                self.plot_img.set_data(ind)
+                plt.draw()
+                plt.pause(0.00001)
+
+        return num_eval

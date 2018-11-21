@@ -14,11 +14,12 @@ class GenAttack:
         self.image_shape = image_shape
         self.image_dim = image_dim
         self.image = None
-        self.target_index = 0
+        self.index = 0
         self.stop = False
         self.evaluations = 0
         self.evaluation_found = 0
         self.adversarial_image = None
+        self.targeted = True
 
         self.plot_img = None
 
@@ -59,21 +60,31 @@ class GenAttack:
         image = (np.expand_dims(ind, 0))
         predictions = self.model.predict(image)[0]
         self.evaluations += 1
-        target_prediction = predictions[self.target_index]
-        if np.argmax(predictions) == self.target_index:
-            self.stop = True
-            self.evaluation_found = self.evaluations
 
-        predictions[self.target_index] = -999
+        if self.targeted:
+            if np.argmax(predictions) == self.index:
+                self.stop = True
+                self.evaluation_found = self.evaluations
 
-        other_prediction_index = np.argmax(predictions)
-        other_prediction = predictions[other_prediction_index]
+            target_prediction = predictions[self.index]
+            predictions[self.index] = -999
+            other_prediction_index = np.argmax(predictions)
+            other_prediction = predictions[other_prediction_index]
+        else:
+            if np.argmax(predictions) != self.index:
+                self.stop = True
+                self.evaluation_found = self.evaluations
+
+            other_prediction = predictions[self.index]
+            predictions[self.index] = -999
+            target_prediction_index = np.argmax(predictions)
+            target_prediction = predictions[target_prediction_index]
 
         #print("target_prediction=", target_prediction)
         #print("other_prediction=", other_prediction)
 
-        #if self.evaluations % 500 == 0:
-        #    print("eval:", self.evaluations)
+        if self.evaluations % 500 == 0:
+            print("eval:", self.evaluations)
 
         return (np.log10(target_prediction) - np.log10(other_prediction),)
 
@@ -87,12 +98,13 @@ class GenAttack:
         return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-self.dist_delta,
                                                                             high=self.dist_delta)
 
-    def attack(self, image, target_index, pop_size, num_eval=100000, draw=False):
+    def attack(self, image, pop_size, targeted=True, index=0, num_eval=100000, draw=False):
         self.image = image
-        self.target_index = target_index
+        self.index = index
         self.stop = False
         self.evaluations = 0
         self.evaluation_found = 0
+        self.targeted = targeted
 
         # initialize population
         pop = self.toolbox.population(n=pop_size)
@@ -104,14 +116,15 @@ class GenAttack:
                 individual[i] += image[i]
 
         if draw:
-            plt.figure()
-            plt.ion()
-            plt.show()
-            img = np.array(pop[0])
-            img = img.reshape((self.image_shape, self.image_shape, self.image_dim))
-            self.plot_img = plt.imshow(img)
-            plt.draw()
-            plt.pause(0.001)
+            if not self.plot_img:
+                plt.figure()
+                plt.ion()
+                plt.show()
+                img = np.array(pop[0])
+                img = img.reshape((self.image_shape, self.image_shape))
+                self.plot_img = plt.imshow(img)
+                plt.draw()
+                plt.pause(0.001)
 
         while self.evaluations < num_eval:
             # evaluate the entire population
@@ -119,8 +132,6 @@ class GenAttack:
             for ind, fit in zip(pop, fitnesses):
                 ind.fitness.values = fit
 
-            # check if best individual == target (keep best individual)
-            # print("evaluations=", self.evaluations)
             if self.stop:
                 return self.evaluation_found
 
@@ -130,6 +141,7 @@ class GenAttack:
             for ind in pop:
                 ind.fitness.values = (ind.fitness.values[0] + min_fit,)
 
+            # get elite member
             elite = max(pop, key=lambda ind: ind.fitness.values)
 
             # select the next generation individuals
@@ -165,7 +177,7 @@ class GenAttack:
 
             if draw:
                 ind = np.array(elite)
-                ind = ind.reshape((self.image_shape, self.image_shape, self.image_dim))
+                ind = ind.reshape((self.image_shape, self.image_shape))
                 self.plot_img.set_data(ind)
                 plt.draw()
                 plt.pause(0.00001)

@@ -1,1 +1,10 @@
+
+tmp/
+cifar-10-batches-bin/
+cifar-data.tar.gz
+data/
+img.npy
+output.png
+zoo/
+imagenetdata/
 __pycache__/

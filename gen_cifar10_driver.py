@@ -86,18 +86,23 @@ if __name__ == "__main__":
         max_queries = 100000
         fails = 0
 
+        print("running", num_samples, "samples")
+
         for i in range(len(inputs)):
             image = (np.expand_dims(inputs[i], 0))
             prediction = model.predict(image)
+            original_index = np.argmax(prediction)
+            target_index = np.argmax(targets[i])
 
-            print("changing", np.argmax(prediction), "to", np.argmax(targets[i]))
+            print("sample", i + 1, "- changing", original_index, "to", target_index)
 
             time_start = time.time()
-            result = attack.attack(image=image, target_index=np.argmax(targets[i]), pop_size=6, num_eval=max_queries,
+            result = attack.attack(image=image, pop_size=6, targeted=False, index=original_index, num_eval=max_queries,
                                    draw=False)
             time_end = time.time()
 
             print("took", time_end - time_start, "seconds")
+            print("")
 
             if result != max_queries:
                 query_results.append(result)
