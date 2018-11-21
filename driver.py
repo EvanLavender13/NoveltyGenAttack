@@ -24,17 +24,20 @@ model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
-model.fit(x_train, y_train, epochs=1)
-model.evaluate(x_test, y_test)
+#model.fit(x_train, y_train, epochs=1)
+#model.evaluate(x_test, y_test)
 
 gen = GenAttack(model)
 
 query_results = []
 time_results = []
 
-num_attacks = 10
+num_attacks = 1
 max_queries = 10000
 failed_attacks = 0.0
+
+print(type(x_test))
+print(type(x_test[0]))
 
 for i in range(num_attacks):
     target = random.randint(0, 9)

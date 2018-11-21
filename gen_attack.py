@@ -12,7 +12,6 @@ class GenAttack:
         self.mut_prob = mut_prob
         self.model = model
         self.image = None
-        self.index = 0
         self.target_index = 0
         self.stop = False
         self.evaluations = 0
@@ -28,7 +27,7 @@ class GenAttack:
         # create a maximizing fitness value
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
         # create an individual that is a list of values to be added to image
-        creator.create("Individual", list, fitness=creator.FitnessMax)
+        creator.create("Individual", np.ndarray, fitness=creator.FitnessMax)
 
         self.toolbox.register("random_distribution", self.distribution)
         # individual of random values
@@ -50,7 +49,7 @@ class GenAttack:
             log(target prediction) - log(max prediction != target)
         """
         ind = np.array(individual)
-        ind = ind.reshape((28, 28))
+        ind = ind.reshape((28, 28, 1))
 
         image = (np.expand_dims(ind, 0))
         predictions = self.model.predict(image)[0]
@@ -65,6 +64,12 @@ class GenAttack:
         other_prediction_index = np.argmax(predictions)
         other_prediction = predictions[other_prediction_index]
 
+        #print("target_prediction=", target_prediction)
+        #print("other_prediction=", other_prediction)
+
+        if self.evaluations % 500 == 0:
+            print("eval:", self.evaluations)
+
         return (np.log10(target_prediction) - np.log10(other_prediction),)
 
     def distribution(self):
@@ -77,9 +82,8 @@ class GenAttack:
         return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-self.dist_delta,
                                                                             high=self.dist_delta)
 
-    def attack(self, image, index, target_index, pop_size, num_eval=100000, draw=False):
+    def attack(self, image, target_index, pop_size, num_eval=100000, draw=False):
         self.image = image
-        self.index = index
         self.target_index = target_index
         self.stop = False
         self.evaluations = 0
@@ -87,7 +91,7 @@ class GenAttack:
 
         # initialize population
         pop = self.toolbox.population(n=pop_size)
-        flattened_image = np.array(image).flatten()
+        flattened_image = image.flatten()
         images = [flattened_image] * pop_size
 
         for individual, image in zip(pop, images):
@@ -136,10 +140,8 @@ class GenAttack:
                     parent = parent1 if np.random.random() < prob else parent2
                     child[i] = parent[i]
 
-                for i in range(len(child)):
                     child[i] += self.toolbox.random_distribution()
-
-                del child.fitness.values
+                    del child.fitness.values
 
                 offspring.append(child)
 
