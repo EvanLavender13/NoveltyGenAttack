@@ -69,13 +69,14 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = True
 
-        data, model = MNIST(), MNISTModel("zoo/models/mnist", sess, use_log)
+        data, model = MNIST(), MNISTModel("models/mnist", sess, use_log)
 
         attack = NoveltyAttack(model, 28, 1)
 
-        num_samples = 1
+        num_samples = 11
+        targeted = False
 
-        inputs, targets = generate_data(data, samples=num_samples, targeted=True,
+        inputs, targets = generate_data(data, samples=num_samples, targeted=targeted,
                                         start=0, inception=False)
 
         inputs = inputs[1:num_samples + 1]
@@ -84,7 +85,7 @@ if __name__ == "__main__":
         query_results = []
         time_results = []
 
-        max_queries = 1000
+        max_queries = 100000
         fails = 0
 
         print("running", num_samples, "samples")
@@ -92,11 +93,15 @@ if __name__ == "__main__":
         for i in range(len(inputs)):
             image = (np.expand_dims(inputs[i], 0))
             prediction = model.predict(image)
+            original_index = np.argmax(prediction)
+            target_index = np.argmax(targets[i])
 
             print("sample", i + 1, "- changing", np.argmax(prediction), "to", np.argmax(targets[i]))
 
+            index = target_index if targeted else original_index
+
             time_start = time.time()
-            result = attack.attack(image=image, target_index=np.argmax(targets[i]), pop_size=6, num_eval=max_queries,
+            result = attack.attack(image=image, pop_size=20, targeted=targeted, index=index, num_eval=max_queries,
                                    draw=True)
             time_end = time.time()
 
@@ -115,6 +120,7 @@ if __name__ == "__main__":
         print("num_attacks=", len(inputs))
         print("failed_attacks=", fails)
         print("asr=", (len(inputs) - fails) / len(inputs) * 100)
+        print("mean query count=", statistics.mean(query_results))
         print("median query count=", statistics.median(query_results))
         print("mean runtime=", statistics.mean(time_results) / 3600)
         print("--------------------------------------------------------")

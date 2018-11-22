@@ -1,9 +1,10 @@
+import multiprocessing
+
 import matplotlib.pyplot as plt
 import numpy as np
 from deap import base
 from deap import creator
 from deap import tools
-import multiprocessing
 
 from novelty_eval import NoveltyEvaluator
 
@@ -17,17 +18,18 @@ class NoveltyAttack:
         self.image_shape = image_shape
         self.image_dim = image_dim
         self.image = None
-        self.target_index = 0
+        self.index = 0
         self.stop = False
         self.evaluations = 0
         self.evaluation_found = 0
         self.adversarial_image = None
         self.pop = None
         self.predictions = None
+        self.targeted = True
 
         self.plot_img = None
 
-        self.novelty_eval = NoveltyEvaluator()
+        self.novelty_eval = None
         self.toolbox = base.Toolbox()
 
         np.random.seed(64)
@@ -60,13 +62,13 @@ class NoveltyAttack:
             log(target prediction) - log(max prediction != target)
         """
 
-        behavior = self.predictions.get(str(individual))
+        behavior = self.predictions.get(tuple(individual))
 
         novelty = self.novelty_eval.evaluate_novelty(self.pop, self.predictions, behavior)
 
+        # print("novelty=", novelty)
+
         return (novelty,)
-
-
 
     def distribution(self):
         """
@@ -78,12 +80,15 @@ class NoveltyAttack:
         return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-self.dist_delta,
                                                                             high=self.dist_delta)
 
-    def attack(self, image, target_index, pop_size, num_eval=100000, draw=False):
+    def attack(self, image, pop_size, k=30, targeted=True, index=0, num_eval=100000, draw=False):
         self.image = image
-        self.target_index = target_index
+        self.index = index
         self.stop = False
         self.evaluations = 0
         self.evaluation_found = 0
+        self.targeted = targeted
+
+        self.novelty_eval = NoveltyEvaluator(pop_size, k)
 
         # initialize population
         pop = self.toolbox.population(n=pop_size)
@@ -95,34 +100,43 @@ class NoveltyAttack:
                 individual[i] += image[i]
 
         if draw:
-            plt.figure()
-            plt.ion()
-            plt.show()
-            img = np.array(pop[0])
-            img = img.reshape((self.image_shape, self.image_shape))
-            self.plot_img = plt.imshow(img)
-            plt.draw()
-            plt.pause(0.001)
+            if not self.plot_img:
+                plt.figure()
+                plt.ion()
+                plt.show()
+                img = np.array(image)
+                if self.image_dim > 1:
+                    img = img.reshape((self.image_shape, self.image_shape, self.image_dim))
+                else:
+                    img = img.reshape((self.image_shape, self.image_shape))
+                self.plot_img = plt.imshow(img)
+                plt.draw()
+                plt.pause(0.001)
 
         while self.evaluations < num_eval:
             self.pop = pop
             self.predictions = {}
-            for individual in pop:
+            for i in range(len(pop)):
+                individual = pop[i]
                 ind = np.array(individual)
                 ind = ind.reshape((self.image_shape, self.image_shape, self.image_dim))
 
                 img = (np.expand_dims(ind, 0))
                 prediction = self.model.predict(img)
-                self.predictions[str(individual)] = prediction[0]
+                self.predictions[tuple(individual)] = prediction[0]
                 self.evaluations += 1
 
-                print("pred=", prediction[0])
-                print("max=", np.max(prediction[0]))
-                print("target=", prediction[0][self.target_index])
-
-                if np.argmax(prediction) == self.target_index:
-                    self.stop = True
-                    self.evaluation_found = self.evaluations
+                # print("pred=", prediction[0])
+                # print("max=", np.max(prediction[0]))
+                # print("target=", prediction[0][self.target_index])
+                if self.targeted:
+                    if np.argmax(prediction) == self.index:
+                        self.stop = True
+                        self.evaluation_found = self.evaluations
+                else:
+                    if np.argmax(prediction) != self.index:
+                        self.stop = True
+                        self.evaluation_found = self.evaluations
 
             # evaluate the entire population
             fitnesses = map(self.toolbox.evaluate, pop)
@@ -170,7 +184,10 @@ class NoveltyAttack:
 
             if draw:
                 ind = np.array(elite)
-                ind = ind.reshape((self.image_shape, self.image_shape))
+                if self.image_dim > 1:
+                    ind = ind.reshape((self.image_shape, self.image_shape, self.image_dim))
+                else:
+                    ind = ind.reshape((self.image_shape, self.image_shape))
                 self.plot_img.set_data(ind)
                 plt.draw()
                 plt.pause(0.00001)

@@ -1,9 +1,11 @@
+import multiprocessing
+
 import matplotlib.pyplot as plt
 import numpy as np
 from deap import base
 from deap import creator
 from deap import tools
-import multiprocessing
+
 
 class GenAttack:
     def __init__(self, model, image_shape, image_dim, dist_delta=0.3, step_size=1, mut_prob=0.05):
@@ -65,6 +67,7 @@ class GenAttack:
             if np.argmax(predictions) == self.index:
                 self.stop = True
                 self.evaluation_found = self.evaluations
+                self.adversarial_image = individual
 
             target_prediction = predictions[self.index]
             predictions[self.index] = -999
@@ -74,14 +77,15 @@ class GenAttack:
             if np.argmax(predictions) != self.index:
                 self.stop = True
                 self.evaluation_found = self.evaluations
+                self.adversarial_image = individual
 
             other_prediction = predictions[self.index]
             predictions[self.index] = -999
             target_prediction_index = np.argmax(predictions)
             target_prediction = predictions[target_prediction_index]
 
-        #print("target_prediction=", target_prediction)
-        #print("other_prediction=", other_prediction)
+        # print("target_prediction=", target_prediction)
+        # print("other_prediction=", other_prediction)
 
         if self.evaluations % 500 == 0:
             print("eval:", self.evaluations)
@@ -95,8 +99,8 @@ class GenAttack:
         Returns:
             Bernoulli(p) * U(-dist, dist)
         """
-        return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-self.dist_delta,
-                                                                            high=self.dist_delta)
+        return np.random.binomial(n=1, p=self.mut_prob) * np.random.uniform(low=-(self.step_size * self.dist_delta),
+                                                                            high=(self.step_size * self.dist_delta))
 
     def attack(self, image, pop_size, targeted=True, index=0, num_eval=100000, draw=False):
         self.image = image
@@ -120,14 +124,14 @@ class GenAttack:
                 plt.figure()
                 plt.ion()
                 plt.show()
-                img = np.array(pop[0])
+                img = np.array(image)
                 if self.image_dim > 1:
                     img = img.reshape((self.image_shape, self.image_shape, self.image_dim))
                 else:
                     img = img.reshape((self.image_shape, self.image_shape))
                 self.plot_img = plt.imshow(img)
                 plt.draw()
-                plt.pause(0.001)
+                plt.pause(0.00001)
 
         while self.evaluations < num_eval:
             # evaluate the entire population
@@ -136,7 +140,7 @@ class GenAttack:
                 ind.fitness.values = fit
 
             if self.stop:
-                return self.evaluation_found
+                return self.evaluation_found, self.adversarial_image
 
             # normalize for negative fitness values
             fits = [ind.fitness.values[0] for ind in pop]
@@ -188,4 +192,4 @@ class GenAttack:
                 plt.draw()
                 plt.pause(0.00001)
 
-        return num_eval
+        return num_eval, None

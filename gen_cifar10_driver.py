@@ -68,11 +68,11 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = True
 
-        data, model = CIFAR(), CIFARModel("zoo/models/cifar", sess, use_log)
+        data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
 
         attack = GenAttack(model, 32, 3, dist_delta=0.05)
 
-        num_samples = 10
+        num_samples = 11
         targeted = False
 
         inputs, targets = generate_data(data, samples=num_samples, targeted=targeted,
@@ -100,8 +100,8 @@ if __name__ == "__main__":
             index = target_index if targeted else original_index
 
             time_start = time.time()
-            result = attack.attack(image=image, pop_size=6, targeted=targeted, index=index, num_eval=max_queries,
-                                   draw=True)
+            result, adv = attack.attack(image=image, pop_size=6, targeted=targeted, index=index, num_eval=max_queries,
+                                        draw=False)
             time_end = time.time()
 
             print("took", time_end - time_start, "seconds")
