@@ -1,3 +1,5 @@
+*.out
+*.png
 tmp/
 cifar-10-batches-bin/
 cifar-data.tar.gz

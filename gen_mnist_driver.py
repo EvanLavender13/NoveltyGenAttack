@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
         attack = GenAttack(model, 28, 1)
 
-        NUM_SAMPLES = 2
+        NUM_SAMPLES = 11
         TARGETED = True
         MAX_QUERIES = 100000
         POP_SIZES = [6, 12, 36, 50, 100, 250, 500, 1000]
