@@ -87,8 +87,8 @@ class GenAttack:
         # print("target_prediction=", target_prediction)
         # print("other_prediction=", other_prediction)
 
-        if self.evaluations % 500 == 0:
-            print("eval:", self.evaluations)
+        #if self.evaluations % 500 == 0:
+        #    print("eval:", self.evaluations)
 
         return (np.log10(target_prediction) - np.log10(other_prediction),)
 
