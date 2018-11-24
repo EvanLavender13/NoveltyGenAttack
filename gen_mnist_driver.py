@@ -159,6 +159,7 @@ if __name__ == "__main__":
             OUTPUT_FILE.write("number of attacks={0}\n".format(len(inputs)))
             OUTPUT_FILE.write("failed attacks={0}\n".format(fails))
             OUTPUT_FILE.write("attack success rate={0}\n".format((len(inputs) - fails) / len(inputs) * 100))
+            OUTPUT_FILE.write("mean query count={0}\n".format(statistics.mean(queries)))
             OUTPUT_FILE.write("median query count={0}\n".format(statistics.median(queries)))
             OUTPUT_FILE.write("mean runtime={0}\n".format(statistics.mean(times) / 3600))
             OUTPUT_FILE.write("total runtime={0}\n".format(sum(times) / 3600))
