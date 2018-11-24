@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
         data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
 
-        attack = GenAttack(model, 28, 1)
+        attack = GenAttack(model, 32, 3)
 
         NUM_SAMPLES = 100
         TARGETED = True
