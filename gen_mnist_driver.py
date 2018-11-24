@@ -94,11 +94,11 @@ if __name__ == "__main__":
 
         attack = GenAttack(model, 28, 1)
 
-        NUM_SAMPLES = 11
-        TARGETED = False
+        NUM_SAMPLES = 100
+        TARGETED = True
         MAX_QUERIES = 100000
-        #POP_SIZES = [6, 12, 36, 50, 100, 250, 500, 1000]
-        POP_SIZES = [6]
+        POP_SIZES = [6, 12, 36, 50, 100, 250, 500, 1000]
+        # POP_SIZES = [6]
 
         inputs, targets = generate_data(data, samples=NUM_SAMPLES, targeted=TARGETED,
                                         start=0, inception=False)
@@ -113,6 +113,7 @@ if __name__ == "__main__":
         OUTPUT_FILE.truncate(0)
 
         pop_count = 0
+
         for pop_size in POP_SIZES:
             pop_count += 1
 
@@ -120,10 +121,10 @@ if __name__ == "__main__":
             times = []
             fails = 0
 
-            for i in range(len(inputs)):
-                print_progress_bar(i, len(inputs), prefix="pop {0} {1}/{2}".format(pop_size, pop_count, len(POP_SIZES)),
-                                   suffix="{0}/{1}".format(i, len(inputs)))
+            print_progress_bar(0, len(inputs), prefix="pop {0} {1}/{2}".format(pop_size, pop_count, len(POP_SIZES)),
+                               suffix="{0}/{1}".format(0, len(inputs)))
 
+            for i in range(len(inputs)):
                 image = (np.expand_dims(inputs[i], 0))
                 prediction = model.predict(image)
                 original_index = np.argmax(prediction)
@@ -148,6 +149,10 @@ if __name__ == "__main__":
                 else:
                     fails += 1
 
+                print_progress_bar(i + 1, len(inputs),
+                                   prefix="pop {0} {1}/{2}".format(pop_size, pop_count, len(POP_SIZES)),
+                                   suffix="{0}/{1}".format(i + 1, len(inputs)))
+
             OUTPUT_FILE.write("RESULTS\n")
             OUTPUT_FILE.write("--------------------------------------------------------\n")
             OUTPUT_FILE.write("population size={0}\n".format(pop_size))
@@ -156,6 +161,7 @@ if __name__ == "__main__":
             OUTPUT_FILE.write("attack success rate={0}\n".format((len(inputs) - fails) / len(inputs) * 100))
             OUTPUT_FILE.write("median query count={0}\n".format(statistics.median(queries)))
             OUTPUT_FILE.write("mean runtime={0}\n".format(statistics.mean(times) / 3600))
+            OUTPUT_FILE.write("total runtime={0}\n".format(sum(times) / 3600))
             OUTPUT_FILE.write("--------------------------------------------------------\n\n")
 
         OUTPUT_FILE.close()

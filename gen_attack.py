@@ -1,5 +1,3 @@
-import multiprocessing
-
 import matplotlib.pyplot as plt
 import numpy as np
 from deap import base
@@ -28,9 +26,6 @@ class GenAttack:
         self.toolbox = base.Toolbox()
 
         np.random.seed(64)
-
-        pool = multiprocessing.Pool()
-        self.toolbox.register("map", pool.map)
 
         # create a maximizing fitness value
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -87,7 +82,7 @@ class GenAttack:
         # print("target_prediction=", target_prediction)
         # print("other_prediction=", other_prediction)
 
-        #if self.evaluations % 500 == 0:
+        # if self.evaluations % 500 == 0:
         #    print("eval:", self.evaluations)
 
         return (np.log10(target_prediction) - np.log10(other_prediction),)
