@@ -133,10 +133,12 @@ class NoveltyAttack:
                     if np.argmax(prediction) == self.index:
                         self.stop = True
                         self.evaluation_found = self.evaluations
+                        self.adversarial_image = individual
                 else:
                     if np.argmax(prediction) != self.index:
                         self.stop = True
                         self.evaluation_found = self.evaluations
+                        self.adversarial_image = individual
 
             # evaluate the entire population
             fitnesses = map(self.toolbox.evaluate, pop)
@@ -146,7 +148,7 @@ class NoveltyAttack:
             self.novelty_eval.post_evaluation()
 
             if self.stop:
-                return self.evaluation_found
+                return self.evaluation_found, self.adversarial_image
 
             # get elite member
             elite = max(pop, key=lambda ind: ind.fitness.values[0])
@@ -192,4 +194,4 @@ class NoveltyAttack:
                 plt.draw()
                 plt.pause(0.00001)
 
-        return num_eval
+        return num_eval, None

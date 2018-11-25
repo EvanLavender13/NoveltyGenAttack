@@ -6,7 +6,6 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 
-from gen_attack import GenAttack
 from novelty_attack import NoveltyAttack
 from zoo.setup_mnist import MNIST, MNISTModel
 
@@ -65,6 +64,29 @@ def generate_data(data, samples, targeted=True, start=0, inception=False):
     return inputs, targets
 
 
+# https://stackoverflow.com/a/34325723
+# Print iterations progress
+def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+    # Print New Line on Complete
+    if iteration == total:
+        print()
+
+
 if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = True
@@ -73,54 +95,75 @@ if __name__ == "__main__":
 
         attack = NoveltyAttack(model, 28, 1)
 
-        num_samples = 11
-        targeted = False
+        NUM_SAMPLES = 101
+        TARGETED = False
+        MAX_QUERIES = 100000
+        POP_SIZES = [6, 12, 36, 50, 100, 250, 500, 1000]
+        # POP_SIZES = [6]
 
-        inputs, targets = generate_data(data, samples=num_samples, targeted=targeted,
+        inputs, targets = generate_data(data, samples=NUM_SAMPLES, targeted=TARGETED,
                                         start=0, inception=False)
 
-        inputs = inputs[1:num_samples + 1]
-        targets = targets[1:num_samples + 1]
+        inputs = inputs[1:NUM_SAMPLES + 1]
+        targets = targets[1:NUM_SAMPLES + 1]
 
-        query_results = []
-        time_results = []
+        filename = "results/nov_mnist_run{0}.log"
+        filename = filename.format("-targeted") if TARGETED else filename.format("")
 
-        max_queries = 100000
-        fails = 0
+        OUTPUT_FILE = open(filename, "w+")
+        OUTPUT_FILE.truncate(0)
 
-        print("running", num_samples, "samples")
+        pop_count = 0
 
-        for i in range(len(inputs)):
-            image = (np.expand_dims(inputs[i], 0))
-            prediction = model.predict(image)
-            original_index = np.argmax(prediction)
-            target_index = np.argmax(targets[i])
+        for pop_size in POP_SIZES:
+            pop_count += 1
 
-            print("sample", i + 1, "- changing", np.argmax(prediction), "to", np.argmax(targets[i]))
+            queries = []
+            times = []
+            fails = 0
 
-            index = target_index if targeted else original_index
+            print_progress_bar(0, len(inputs), prefix="pop {0} {1}/{2}".format(pop_size, pop_count, len(POP_SIZES)),
+                               suffix="{0}/{1}".format(0, len(inputs)))
 
-            time_start = time.time()
-            result = attack.attack(image=image, pop_size=20, targeted=targeted, index=index, num_eval=max_queries,
-                                   draw=True)
-            time_end = time.time()
+            for i in range(len(inputs)):
+                image = (np.expand_dims(inputs[i], 0))
+                prediction = model.predict(image)
+                original_index = np.argmax(prediction)
+                target_index = np.argmax(targets[i])
 
-            print("took", time_end - time_start, "seconds")
-            print("")
+                # print("sample", i + 1, "- changing", original_index, "to", target_index)
 
-            if result != max_queries:
-                query_results.append(result)
-                time_results.append(time_end - time_start)
-            else:
-                fails += 1
+                index = target_index if TARGETED else original_index
 
-        print("")
-        print("RESULTS")
-        print("--------------------------------------------------------")
-        print("num_attacks=", len(inputs))
-        print("failed_attacks=", fails)
-        print("asr=", (len(inputs) - fails) / len(inputs) * 100)
-        print("mean query count=", statistics.mean(query_results))
-        print("median query count=", statistics.median(query_results))
-        print("mean runtime=", statistics.mean(time_results) / 3600)
-        print("--------------------------------------------------------")
+                time_start = time.time()
+                query_count, adv = attack.attack(image=image, pop_size=6, targeted=TARGETED, index=index,
+                                                 num_eval=MAX_QUERIES,
+                                                 draw=False)
+                time_end = time.time()
+
+                # print("took", time_end - time_start, "seconds")
+                # print("")
+
+                if query_count != MAX_QUERIES:
+                    queries.append(query_count)
+                    times.append(time_end - time_start)
+                else:
+                    fails += 1
+
+                print_progress_bar(i + 1, len(inputs),
+                                   prefix="pop {0} {1}/{2}".format(pop_size, pop_count, len(POP_SIZES)),
+                                   suffix="{0}/{1}".format(i + 1, len(inputs)))
+
+            OUTPUT_FILE.write("RESULTS\n")
+            OUTPUT_FILE.write("--------------------------------------------------------\n")
+            OUTPUT_FILE.write("population size={0}\n".format(pop_size))
+            OUTPUT_FILE.write("number of attacks={0}\n".format(len(inputs)))
+            OUTPUT_FILE.write("failed attacks={0}\n".format(fails))
+            OUTPUT_FILE.write("attack success rate={0}\n".format((len(inputs) - fails) / len(inputs) * 100))
+            OUTPUT_FILE.write("mean query count={0}\n".format(statistics.mean(queries)))
+            OUTPUT_FILE.write("median query count={0}\n".format(statistics.median(queries)))
+            OUTPUT_FILE.write("mean runtime={0}\n".format(statistics.mean(times) / 3600))
+            OUTPUT_FILE.write("total runtime={0}\n".format(sum(times) / 3600))
+            OUTPUT_FILE.write("--------------------------------------------------------\n\n")
+
+        OUTPUT_FILE.close()
