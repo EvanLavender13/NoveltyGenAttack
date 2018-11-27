@@ -1,5 +1,3 @@
-import multiprocessing
-
 import matplotlib.pyplot as plt
 import numpy as np
 from deap import base
@@ -33,9 +31,6 @@ class NoveltyAttack:
         self.toolbox = base.Toolbox()
 
         np.random.seed(64)
-
-        pool = multiprocessing.Pool()
-        #self.toolbox.register("map", pool.map)
 
         # create a maximizing fitness value
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
