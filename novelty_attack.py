@@ -35,7 +35,7 @@ class NoveltyAttack:
         np.random.seed(64)
 
         pool = multiprocessing.Pool()
-        self.toolbox.register("map", pool.map)
+        #self.toolbox.register("map", pool.map)
 
         # create a maximizing fitness value
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -65,6 +65,14 @@ class NoveltyAttack:
         behavior = self.predictions.get(tuple(individual))
 
         novelty = self.novelty_eval.evaluate_novelty(self.pop, self.predictions, behavior)
+
+        if self.targeted:
+            target_prediction = behavior[self.index]
+            # print("novelty=", novelty, "target=", target_prediction)
+
+            # --- minimal criteria ---
+            # encourage increases to target_prediction
+            novelty += (target_prediction * 1000000)
 
         # print("novelty=", novelty)
 

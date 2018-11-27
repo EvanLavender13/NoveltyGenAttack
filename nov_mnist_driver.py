@@ -95,10 +95,19 @@ if __name__ == "__main__":
 
         attack = NoveltyAttack(model, 28, 1)
 
-        NUM_SAMPLES = 101
-        TARGETED = False
+        NUM_SAMPLES = 10
+        TARGETED = True
         MAX_QUERIES = 100000
         POP_SIZES = [6, 12, 36, 50, 100, 250, 500, 1000]
+        K_VALUES = {6: [1, 2, 3],
+                    12: [3, 6, 9],
+                    36: [6, 12, 18],
+                    50: [5, 15, 20],
+                    100: [10, 20, 30],
+                    250: [20, 45, 75],
+                    500: [25, 50, 100],
+                    1000: [25, 75, 100]}
+
         # POP_SIZES = [6]
 
         inputs, targets = generate_data(data, samples=NUM_SAMPLES, targeted=TARGETED,
@@ -118,52 +127,55 @@ if __name__ == "__main__":
         for pop_size in POP_SIZES:
             pop_count += 1
 
-            queries = []
-            times = []
-            fails = 0
+            for k in K_VALUES[pop_size]:
+                queries = []
+                times = []
+                fails = 0
 
-            print_progress_bar(0, len(inputs), prefix="pop {0} {1}/{2}".format(pop_size, pop_count, len(POP_SIZES)),
-                               suffix="{0}/{1}".format(0, len(inputs)))
+                print_progress_bar(0, len(inputs),
+                                   prefix="pop {0} {1}/{2} k={3}".format(pop_size, pop_count, len(POP_SIZES), k),
+                                   suffix="{0}/{1}".format(0, len(inputs)))
 
-            for i in range(len(inputs)):
-                image = (np.expand_dims(inputs[i], 0))
-                prediction = model.predict(image)
-                original_index = np.argmax(prediction)
-                target_index = np.argmax(targets[i])
+                for i in range(len(inputs)):
+                    image = (np.expand_dims(inputs[i], 0))
+                    prediction = model.predict(image)
+                    original_index = np.argmax(prediction)
+                    target_index = np.argmax(targets[i])
 
-                # print("sample", i + 1, "- changing", original_index, "to", target_index)
+                    # print("sample", i + 1, "- changing", original_index, "to", target_index)
 
-                index = target_index if TARGETED else original_index
+                    index = target_index if TARGETED else original_index
 
-                time_start = time.time()
-                query_count, adv = attack.attack(image=image, pop_size=6, targeted=TARGETED, index=index,
-                                                 num_eval=MAX_QUERIES,
-                                                 draw=False)
-                time_end = time.time()
+                    time_start = time.time()
+                    query_count, adv = attack.attack(image=image, pop_size=6, k=k, targeted=TARGETED, index=index,
+                                                     num_eval=MAX_QUERIES,
+                                                     draw=False)
+                    time_end = time.time()
 
-                # print("took", time_end - time_start, "seconds")
-                # print("")
+                    # print("took", time_end - time_start, "seconds")
+                    # print("")
 
-                if query_count != MAX_QUERIES:
-                    queries.append(query_count)
-                    times.append(time_end - time_start)
-                else:
-                    fails += 1
+                    if query_count != MAX_QUERIES:
+                        queries.append(query_count)
+                        times.append(time_end - time_start)
+                    else:
+                        fails += 1
 
-                print_progress_bar(i + 1, len(inputs),
-                                   prefix="pop {0} {1}/{2}".format(pop_size, pop_count, len(POP_SIZES)),
-                                   suffix="{0}/{1}".format(i + 1, len(inputs)))
+                    print_progress_bar(i + 1, len(inputs),
+                                       prefix="pop {0} {1}/{2} k={3}".format(pop_size, pop_count, len(POP_SIZES), k),
+                                       suffix="{0}/{1}".format(i + 1, len(inputs)))
 
-            OUTPUT_FILE.write("RESULTS\n")
-            OUTPUT_FILE.write("--------------------------------------------------------\n")
-            OUTPUT_FILE.write("population size={0}\n".format(pop_size))
-            OUTPUT_FILE.write("number of attacks={0}\n".format(len(inputs)))
-            OUTPUT_FILE.write("failed attacks={0}\n".format(fails))
-            OUTPUT_FILE.write("attack success rate={0}\n".format((len(inputs) - fails) / len(inputs) * 100))
-            OUTPUT_FILE.write("mean query count={0}\n".format(statistics.mean(queries)))
-            OUTPUT_FILE.write("median query count={0}\n".format(statistics.median(queries)))
-            OUTPUT_FILE.write("mean runtime={0}\n".format(statistics.mean(times) / 3600))
-            OUTPUT_FILE.write("total runtime={0}\n".format(sum(times) / 3600))
-            OUTPUT_FILE.write("--------------------------------------------------------\n\n")
+                OUTPUT_FILE.write("RESULTS\n")
+                OUTPUT_FILE.write("--------------------------------------------------------\n")
+                OUTPUT_FILE.write("population size={0}\n".format(pop_size))
+                OUTPUT_FILE.write("k value={0}\n".format(k))
+                OUTPUT_FILE.write("number of attacks={0}\n".format(len(inputs)))
+                OUTPUT_FILE.write("failed attacks={0}\n".format(fails))
+                OUTPUT_FILE.write("attack success rate={0}\n".format((len(inputs) - fails) / len(inputs) * 100))
+                OUTPUT_FILE.write("mean query count={0}\n".format(statistics.mean(queries)))
+                OUTPUT_FILE.write("median query count={0}\n".format(statistics.median(queries)))
+                OUTPUT_FILE.write("mean runtime={0}\n".format(statistics.mean(times) / 3600))
+                OUTPUT_FILE.write("total runtime={0}\n".format(sum(times) / 3600))
+                OUTPUT_FILE.write("--------------------------------------------------------\n\n")
 
         OUTPUT_FILE.close()
