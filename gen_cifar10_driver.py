@@ -138,7 +138,7 @@ if __name__ == "__main__":
                 time_start = time.time()
                 query_count, adv = attack.attack(image=image, pop_size=6, targeted=TARGETED, index=index,
                                                  num_eval=MAX_QUERIES,
-                                                 draw=True)
+                                                 draw=False)
                 time_end = time.time()
 
                 # print("took", time_end - time_start, "seconds")
