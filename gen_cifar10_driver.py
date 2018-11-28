@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
         data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
 
-        attack = GenAttack(model, 32, 3)
+        attack = GenAttack(model, 32, 3, dist_delta=0.05)
 
         NUM_SAMPLES = 100
         TARGETED = True
@@ -138,7 +138,7 @@ if __name__ == "__main__":
                 time_start = time.time()
                 query_count, adv = attack.attack(image=image, pop_size=6, targeted=TARGETED, index=index,
                                                  num_eval=MAX_QUERIES,
-                                                 draw=False)
+                                                 draw=True)
                 time_end = time.time()
 
                 # print("took", time_end - time_start, "seconds")
