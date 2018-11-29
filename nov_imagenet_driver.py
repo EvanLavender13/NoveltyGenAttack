@@ -180,5 +180,6 @@ if __name__ == "__main__":
                 OUTPUT_FILE.write("mean runtime={0}\n".format(statistics.mean(times) / 3600))
                 OUTPUT_FILE.write("total runtime={0}\n".format(sum(times) / 3600))
                 OUTPUT_FILE.write("--------------------------------------------------------\n\n")
+                OUTPUT_FILE.flush()
 
         OUTPUT_FILE.close()
