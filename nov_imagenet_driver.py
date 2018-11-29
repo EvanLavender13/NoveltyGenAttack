@@ -119,7 +119,7 @@ if __name__ == "__main__":
         inputs = inputs[1:NUM_SAMPLES + 1]
         targets = targets[1:NUM_SAMPLES + 1]
 
-        filename = "results/nov_cifar10_run{0}.log"
+        filename = "results/nov_imagenet_run{0}.log"
         filename = filename.format("-targeted") if TARGETED else filename.format("")
 
         OUTPUT_FILE = open(filename, "w+")
