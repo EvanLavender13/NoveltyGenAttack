@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
         attack = NoveltyAttack(model, 32, 3, dist_delta=0.05)
 
-        NUM_SAMPLES = 10
+        NUM_SAMPLES = 100
         TARGETED = True
         MAX_QUERIES = 10000  # 10000 for sanity's sake
         POP_SIZES = [6, 12, 36, 50, 100, 250, 500, 1000]
