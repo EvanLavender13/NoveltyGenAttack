@@ -6,6 +6,5 @@ cifar-data.tar.gz
 data/
 img.npy
 output.png
-zoo/
 imagenetdata/
 __pycache__/
