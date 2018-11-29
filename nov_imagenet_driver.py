@@ -8,6 +8,7 @@ from PIL import Image
 
 from novelty_attack import NoveltyAttack
 from zoo.setup_cifar import CIFAR, CIFARModel
+from zoo.setup_inception import ImageNet, InceptionModel
 
 
 def show(img, name="output.png"):
@@ -91,13 +92,15 @@ if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = True
 
-        data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
+        # does not work
+        data, model = ImageNet(), InceptionModel(sess, use_log)
 
+        # IDK image dims
         attack = NoveltyAttack(model, 32, 3, dist_delta=0.05)
 
         NUM_SAMPLES = 10
         TARGETED = True
-        MAX_QUERIES = 10000  # 10000 for sanity's sake
+        MAX_QUERIES = 1000000
         POP_SIZES = [6, 12, 36, 50, 100, 250, 500, 1000]
         K_VALUES = {6: [1, 2, 3],
                     12: [3, 6, 9],
