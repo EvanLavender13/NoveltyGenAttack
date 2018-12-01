@@ -138,7 +138,7 @@ if __name__ == "__main__":
                 index = target_index if TARGETED else original_index
 
                 time_start = time.time()
-                query_count, adv = attack.attack(image=image, pop_size=6, targeted=TARGETED, index=index,
+                query_count, adv = attack.attack(image=image, pop_size=pop_size, targeted=TARGETED, index=index,
                                                  num_eval=MAX_QUERIES,
                                                  draw=False)
                 time_end = time.time()
